@@ -3,6 +3,7 @@ import fs from 'fs';
 import express from 'express';
 import driversRouter from './drivers.js';
 import carsRouter from './cars.js';
+import awesomeRouter from './awesome.js';
 import cors from 'cors';
 
 const app = express();
@@ -29,6 +30,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use("/driver", driversRouter);
 app.use("/car", carsRouter);
+app.use("/awesome", awesomeRouter);
 
 //finally, serve it on the specified port
 

@@ -62,7 +62,7 @@ const getDriver = (req, res) => {
 const addDriver = (req, res) => {
     const { name, number, shortName, skill: { street, race } } = req.body;
     if (!number || !shortName || !name || !race || !street) {
-        return res.json({
+        return res.status(400).json({
             code: 400,
             result: 'All fields are required: number, shortName, name, raceSkill, streetSkill'
         });
@@ -71,7 +71,7 @@ const addDriver = (req, res) => {
     const numRace = parseInt(race, 10);
     const numberInt = parseInt(number, 10);
     if (numStreet + numRace != 100) {
-        return res.json({
+        return res.status(400).json({
             code: 400,
             result: 'Invalid data: race + street must equal 100'
         });
@@ -82,7 +82,7 @@ const addDriver = (req, res) => {
         [numberInt, shortName, name, numRace, numStreet],
         (err, result) => {
             if (err) {
-                return res.json({
+                return res.status(500).json({
                     code: 500,
                     result: err
                 });
@@ -99,7 +99,7 @@ const updateDriver = (req, res) => {
     const { name, number, shortName, skill: { street, race } } = req.body;
     const driverNumber = req.params.number;
     if (!shortName || !name || !race || !street || !number) {
-        return res.json({
+        return res.status(400).json({
             code: 400,
             result: 'All fields are required'
         });
@@ -109,7 +109,7 @@ const updateDriver = (req, res) => {
     const numberInt = parseInt(number, 10);
 
     if (raceInt + streetInt != 100) {
-        return res.json({
+        return res.status(400).json({
             code: 400,
             result: 'Invalid data: raceSkill + streetSkill must equal 100'
         });
@@ -120,13 +120,13 @@ const updateDriver = (req, res) => {
         [number, shortName, name, raceInt, streetInt, driverNumber],
         (err, result) => {
             if (err) {
-                return res.json({
+                return res.status(500).json({
                     code: 500,
                     result: err
                 });
             }
             if (result.affectedRows === 0) {
-                return res.json({
+                return res.status(400).json({
                     code: 400,
                     message: 'Driver Not found'
                 });

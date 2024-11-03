@@ -41,6 +41,7 @@ const fetchDriver = (driverNumber) => {
                         race: rows[0].race,
                         street: rows[0].street
                     },
+                    uri: `https://lab-95a11ac6-8103-422e-af7e-4a8532f40144.australiaeast.cloudapp.azure.com:7065/driver/${rows[0].number}`,
                 };
                 resolve(driver);
             }
@@ -109,53 +110,45 @@ const getCars = async (req, res) => {
     });
 };
 
-const getCar = (req, res) => {
+const getCar = async (req, res) => {
     const carId = req.params.id;
-    dbconn.query('SELECT * FROM cars WHERE id = ?', [carId], async (err, rows) => {
-        if (err) {
-            return res.status(500).json({
-                code: 500,
-                result: err
-            });
-        };
-        try {
-            if (rows.length === 0) {
-                return res.status(404).json({
-                    code: 404,
-                    result: 'Car Not found'
-                });
-            }
-            const car = rows[0];
-            if (!car.number) {
-                return res.status(404).json({
-                    code: 404,
-                    result: "Driver not assigned"
-                });
-            }
-            const driver = await fetchDriver(car.number);
-            const carWithDriver = {
+    const car = await fetchCar(carId);
+    if (!car) {
+        return res.status(404).json({ code: 404, result: 'Fetched no car' });
+    }
+    const number = car.driverNumber;
+    if (!number) {
+        return res.status(200).json({
+            code: 200,
+            result: {
                 id: car.id,
-                driver: {
-                    name: driver.name,
-                    uri: driver.uri
-                },
+                driver: { name: "N/A", uri: "N/A" },
                 suitability: {
-                    race: car.race,
-                    street: car.street,
+                    race: car.suitability.race,
+                    street: car.suitability.street,
                 },
-                reliability: car.reliability,
-            };
-            return res.status(200).json({
-                code: 200,
-                result: carWithDriver
-            });
-        } catch (error) {
-            res.status(500).json({
-                code: 500,
-                result: error
-            });
-        }
-    });
+                reliability: car.reliability
+            }
+        });
+    }
+    const driver = await fetchDriver(number);
+    if (!driver) {
+        return res.status(404).json({ code: 404, result: 'Driver Not found' });
+    }
+    const carWithDriver = {
+        id: car.id,
+        driver: {
+            name: driver.name,
+            uri: driver.uri
+        },
+        suitability: {
+            race: car.suitability.race,
+            street: car.suitability.street,
+        },
+        reliability: car.reliability,
+
+    };
+    res.status(200).json({ code: 200, result: carWithDriver });
 };
 
 const getDriverOfCar = (req, res) => {
@@ -373,8 +366,8 @@ const deleteCar = (req, res) => {
 
 const getLapResult = async (req, res) => {
     const carId = req.params.id;
-    const { type, baseLapTime } = req.query;
-    console.log("Request : ", req.query);
+    const { type } = req.query;
+    let baseLapTime = parseFloat(req.query.baseLapTime);
     const car = await fetchCar(carId);
     if (!car) {
         return res.status(404).json({ code: 404, result: 'Car Not found' });
@@ -384,7 +377,7 @@ const getLapResult = async (req, res) => {
     if (!driverNumber) {
         return res.status(418).json({ code: 418, result: 'I am a Teapot?' });
     }
-    if (!type || !baseLapTime) {
+    if (!type || isNaN(baseLapTime)) {
         return res.status(400).json({ code: 400, result: 'All fields are required: type, baseLapTime' });
     }
     if (type !== 'street' && type !== 'race') {
@@ -394,10 +387,13 @@ const getLapResult = async (req, res) => {
         ? Math.floor(Math.random() * (reliability + 10))
         : Math.floor(Math.random() * (reliability + 5));
 
+    const randomSecond = Math.random() * 5;
+
+    console.log("Random", random);
     if (random >= reliability) {
         const lap = {
             time: 0,
-            randomness: random,
+            randomness: randomSecond,
             crashed: true
         };
         return res.status(200).json({ code: 200, result: lap });
@@ -411,14 +407,19 @@ const getLapResult = async (req, res) => {
     const streetSkill = driver.skill.street;
     const driverSkill = type === 'street' ? streetSkill : raceSkill;
     const speed = (suitability + driverSkill + (100 - reliability)) / 3;
+    console.log("Suitability", suitability);
+    console.log("DriverSkill", driverSkill);
+    console.log("Reliability", reliability);
+    console.log("Speed", speed);
     const time = baseLapTime + (10 * (speed / 100));
     const lap = {
         time: time,
-        randomness: random,
+        randomness: randomSecond,
         crashed: false
     };
     res.status(200).json({ code: 200, result: lap });
 };
+
 
 const router = express.Router();
 router.get('/', getCars);
